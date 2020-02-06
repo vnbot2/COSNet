@@ -110,7 +110,7 @@ def configure_dataset_init_model(args):
         args.resume = None #'./snapshots/davis/co_attention_davis_124.pth' #checkpoint log file, helping recovering training
 		
     elif args.dataset == 'cityscapes':
-        args.batch_size = 8   #Number of images sent to the network in one step, batch_size/num_GPU=2
+        args.batch_size = 16   #Number of images sent to the network in one step, batch_size/num_GPU=2
         args.maxEpoches = 60 #epoch nums, 60 epoches is equal to 90k iterations, max iterations= maxEpoches*len(train)/batch_size')
         # 60x2975/2=89250 ~= 90k, single_GPU_batch_size=2
         args.data_dir = '/home/wty/AllDataSet/CityScapes'   # Path to the directory containing the PASCAL VOC dataset
@@ -392,7 +392,11 @@ def main():
             target, target_gt, search, search_gt = batch['target'], batch['target_gt'], batch['search'], batch['search_gt']
             images, labels = batch['img'], batch['img_gt']
             #print(labels.size())
-            images.requires_grad_()
+            # if i_iter < 500:
+            #     continue
+            if len(images) < 4:
+                continue
+            # images.requires_grad_()
             images = Variable(images).cuda()
             labels = Variable(labels.float().unsqueeze(1)).cuda()
             

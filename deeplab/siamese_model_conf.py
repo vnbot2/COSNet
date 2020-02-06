@@ -212,8 +212,8 @@ class ResNet(nn.Module):
             x = self.layer2(x)
             x = self.layer3(x)
             x = self.layer4(x)
-            
-        fea = self.layer5(x)
+            fea = self.layer5(x)
+
         x = self.main_classifier(fea)
         #print("before upsample, tensor size:", x.size())
         x = F.upsample(x, input_size, mode='bilinear')  #upsample to the size of input image, scale=8

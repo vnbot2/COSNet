@@ -13,7 +13,7 @@ import cv2
 from scipy.misc import imresize
 import scipy.misc 
 import random
-
+from glob import glob
 #from dataloaders.helpers import *
 from torch.utils.data import Dataset
 
@@ -43,6 +43,96 @@ def my_crop(img,gt):
     
     return img, gt
 
+
+class ImageDir(Dataset):
+    """DAVIS 2016 dataset constructed using the PyTorch built-in functionalities"""
+
+    def __init__(self,
+                 db_root_dir='./dataset/demo/demo1',
+                 meanval=(104.00699, 116.66877, 122.67892),
+                 seq_name=None, sample_range=10):
+        """Loads image to label pairs for tool pose estimation
+        db_root_dir: dataset directory with subfolders "JPEGImages" and "Annotations"
+        """
+        
+        self.img_list = glob(f'{db_root_dir}/*.jpg')
+        assert len(self.img_list) > 0
+        self.meanval = meanval
+        self.__getitem__(0)
+
+    def __len__(self):
+        return len(self.img_list)
+
+    def __getitem__(self, idx):
+        # target, target_gt,sequence_name = self.make_img_gt_pair(idx) #测试时候要分割的帧
+        # target_id = idx
+        # seq_name1 = self.img_list[target_id].split('/')[-2] #获取视频名称
+        # sample = {'target': target, 'target_gt': target_gt, 'seq_name': sequence_name, 'search_0': None}
+        # if self.range>=1:
+        #     my_index = self.Index[seq_name1]
+        #     search_num = list(range(my_index[0], my_index[1]))  
+        #     search_ids = random.sample(search_num, self.range)#min(len(self.img_list)-1, target_id+np.random.randint(1,self.range+1))
+        
+        #     for i in range(0,self.range):
+        #         search_id = search_ids[i]
+        #         search, search_gt,sequence_name = self.make_img_gt_pair(search_id)
+        #         if sample['search_0'] is None:
+        #             sample['search_0'] = search
+        #         else:
+        #             sample['search'+'_'+str(i)] = search
+
+        #     if self.seq_name is not None:
+        #         fname = os.path.join(self.seq_name, "%05d" % idx)
+        #         sample['fname'] = fname
+       
+        # else:
+            # img, gt = self.make_img_gt_pair(idx)
+        # img = cv2.imread(self.img_list[idx], cv2.IMREAD_COLOR)
+        # img = np.array(img, dtype=np.float32)
+        # #img = img[:, :, ::-1]
+        # img = np.subtract(img, np.array(self.meanval, dtype=np.float32))        
+        # img = img.transpose((2, 0, 1))  # NHWC -> NCHW
+        # sequence_name = os.path.basename(self.img_list[idx])
+        # sample = {'target': img, 'seq_name': sequence_name, 'search_0': None}#, 'gt': gt}
+        # # if self.seq_name is not None:
+        #     # fname = os.path.join(self.seq_name, "%05d" % idx)
+        #     # sample['fname'] = fname
+        target, target_gt,sequence_name= self.make_img_gt_pair(idx)
+        # import ipdb; ipdb.set_trace()
+        sample = {'target': target, 'target_gt': target_gt, 'seq_name': sequence_name}#, 'search_0': None}
+        return sample
+
+    def make_img_gt_pair(self, idx): 
+        """
+        Make the image-ground-truth pair
+        """
+        img = cv2.imread(self.img_list[idx], cv2.IMREAD_COLOR)
+        gt = np.zeros(img.shape[:-1], dtype=np.uint8)
+            
+
+        # if self.inputRes is not None:
+        #     img = imresize(img, self.inputRes)
+        #     #print('ok1')
+        #     #scipy.misc.imsave('label.png',label)
+        #     #scipy.misc.imsave('img.png',img)
+        #     if self.labels[idx] is not None and self.train:
+        #         label = imresize(label, self.inputRes, interp='nearest')
+
+        img = np.array(img, dtype=np.float32)
+        #img = img[:, :, ::-1]
+        img = np.subtract(img, np.array(self.meanval, dtype=np.float32))        
+        img = img.transpose((2, 0, 1))  # NHWC -> NCHW
+        
+        # if self.labels[idx] is not None and self.train:
+        #         gt = np.array(label, dtype=np.int32)
+        #         gt[gt!=0]=1
+                #gt = gt/np.max([gt.max(), 1e-8])
+        #np.save('gt.npy')
+        # sequence_name = self.img_list[idx].split('/')[2]
+        sequence_name  = os.path.basename(self.img_list[idx]).split('.')[0]
+        return img, gt, sequence_name 
+
+
 class PairwiseImg(Dataset):
     """DAVIS 2016 dataset constructed using the PyTorch built-in functionalities"""
 
@@ -67,8 +157,8 @@ class PairwiseImg(Dataset):
             fname = 'train_seqs'
         else:
             fname = 'val_seqs'
-
-        if self.seq_name is None: #所有的数据集都参与训练
+        
+        if self.seq_name is None: 
             with open(os.path.join(db_root_dir, fname + '.txt')) as f:
                 seqs = f.readlines()
                 img_list = []
@@ -81,11 +171,14 @@ class PairwiseImg(Dataset):
                     img_list.extend(images_path)
                     end_num = len(img_list)
                     Index[seq.strip('\n')]= np.array([start_num, end_num])
-                    lab = np.sort(os.listdir(os.path.join(db_root_dir, 'Annotations/480p/', seq.strip('\n'))))
-                    lab_path = list(map(lambda x: os.path.join('Annotations/480p/', seq.strip(), x), lab))
-                    labels.extend(lab_path)
-        else: #针对所有的训练样本， img_list存放的是图片的路径
-
+                    ano_path = os.path.join(db_root_dir, 'Annotations/480p/', seq.strip('\n'))
+                    if os.path.exists(ano_path):
+                        lab = np.sort(os.listdir(ano_path))
+                        lab_path = list(map(lambda x: os.path.join('Annotations/480p/', seq.strip(), x), lab))
+                        labels.extend(lab_path)
+                    else:
+                        labels.extend(images_path)
+        else: 
             # Initialize the per sequence images for online training
             names_img = np.sort(os.listdir(os.path.join(db_root_dir, str(seq_name))))
             img_list = list(map(lambda x: os.path.join(( str(seq_name)), x), names_img))
@@ -123,8 +216,7 @@ class PairwiseImg(Dataset):
                     sample['search_0'] = search
                 else:
                     sample['search'+'_'+str(i)] = search
-            #np.save('search1.npy',search)
-            #np.save('search_gt.npy',search_gt)
+
             if self.seq_name is not None:
                 fname = os.path.join(self.seq_name, "%05d" % idx)
                 sample['fname'] = fname
