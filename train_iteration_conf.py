@@ -95,10 +95,10 @@ def configure_dataset_init_model(args):
         args.resume = './snapshots/voc12/psp_voc12_3.pth' #checkpoint log file, helping recovering training
         
     elif args.dataset == 'davis': 
-        args.batch_size = 16# 1 card: 5, 2 cards: 10 Number of images sent to the network in one step, 16 on paper
+        args.batch_size = 4 # 1 card: 5, 2 cards: 10 Number of images sent to the network in one step, 16 on paper
         args.maxEpoches = 60 # 1 card: 15, 2 cards: 15 epoches, equal to 30k iterations, max iterations= maxEpoches*len(train_aug)/batch_size_per_gpu'),
-        args.data_dir = '/home/ubuntu/xiankai/dataset/DAVIS-2016'   # 37572 image pairs
-        args.img_dir = '/home/ubuntu/xiankai/dataset/images'
+        args.data_dir = './dataset/DAVIS2017'   # 37572 image pairs
+        args.img_dir = 'dataset/saliency_dataset'
         args.data_list = './dataset/list/VOC2012/train_aug.txt'  # Path to the file listing the images in the dataset
         args.ignore_label = 255     #The index of the label to ignore during the training
         args.input_size = '473,473' #Comma-separated string with height and width of images
@@ -107,7 +107,7 @@ def configure_dataset_init_model(args):
         #Where restore model pretrained on other dataset, such as COCO.")
         args.restore_from = './pretrained/deep_labv3/deeplab_davis_12_0.pth' #resnet50-19c8e357.pth''/home/xiankai/PSPNet_PyTorch/snapshots/davis/psp_davis_0.pth' #
         args.snapshot_dir = './snapshots/davis_iteration_conf/'          #Where to save snapshots of the model
-        args.resume = './snapshots/davis/co_attention_davis_124.pth' #checkpoint log file, helping recovering training
+        args.resume = None #'./snapshots/davis/co_attention_davis_124.pth' #checkpoint log file, helping recovering training
 		
     elif args.dataset == 'cityscapes':
         args.batch_size = 8   #Number of images sent to the network in one step, batch_size/num_GPU=2
@@ -357,6 +357,7 @@ def main():
                                       batch_size = args.batch_size, shuffle=True, num_workers=0, pin_memory=True, drop_last=True)
     elif args.dataset == 'davis':  #for davis 2016
         db_train = db.PairwiseImg(train=True, inputRes=input_size, db_root_dir=args.data_dir, img_root_dir=args.img_dir,  transform=None) #db_root_dir() --> '/path/to/DAVIS-2016' train path
+        sample_item = db_train.__getitem__(0)
         trainloader = data.DataLoader(db_train, batch_size= args.batch_size, shuffle=True, num_workers=0)
     else:
         print("dataset error")
@@ -409,7 +410,6 @@ def main():
                     max_iter = args.maxEpoches * train_len)
             #print(images.size())
             if i_iter%3 ==0: #对于静态图片的训练
-                
                 pred1, pred2, pred3 = model(images, images)
                 loss = 0.1*(loss_calc1(pred3, labels) + 0.8* loss_calc2(pred3, labels) )
                 loss.backward()

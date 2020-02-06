@@ -8,13 +8,14 @@ Created on Wed Sep 12 11:39:54 2018
 from __future__ import division
 
 import os
+from glob import glob
 import numpy as np
 import cv2
 from scipy.misc import imresize
 import scipy.misc 
 import random
 
-from dataloaders.helpers import *
+# from dataloaders.helpers import *
 from torch.utils.data import Dataset
 
 def flip(I,flip_p):
@@ -48,7 +49,7 @@ class PairwiseImg(Dataset):
 
     def __init__(self, train=True,
                  inputRes=None,
-                 db_root_dir='/DAVIS-2016',
+                 db_root_dir='./dataset/DAVIS-2016',
                  img_root_dir = None,
                  transform=None,
                  meanval=(104.00699, 116.66877, 122.67892),
@@ -88,19 +89,27 @@ class PairwiseImg(Dataset):
                     lab = np.sort(os.listdir(os.path.join(db_root_dir, 'Annotations/480p/', seq.strip('\n'))))
                     lab_path = list(map(lambda x: os.path.join('Annotations/480p/', seq.strip(), x), lab))
                     labels.extend(lab_path)
-                    
-                with open('/home/ubuntu/xiankai/saliency_data.txt') as f:
-                    seqs = f.readlines()
-                #data_list = np.sort(os.listdir(db_root_dir))
-                    for seq in seqs: #所有数据集
-                        seq = seq.strip('\n') 
-                        images = np.sort(os.listdir(os.path.join(img_root_dir,seq.strip())+'/images/'))#针对某个数据集，比如DUT			
-            # Initialize the original DAVIS splits for training the parent network
-                        images_path = list(map(lambda x: os.path.join((seq +'/images'), x), images))         
-                        image_list.extend(images_path)
-                        lab = np.sort(os.listdir(os.path.join(img_root_dir,seq.strip())+'/saliencymaps'))
-                        lab_path = list(map(lambda x: os.path.join((seq +'/saliencymaps'),x), lab))
-                        im_label.extend(lab_path)
+                # with open('./dataset/saliency_data.txt') as f:
+                    # seqs = f.readlines()
+                images_path = list(map(lambda x:'images/'+os.path.basename(x), glob('dataset/saliency_dataset/images/*.jpg')))
+                lab_path = list(map(lambda x: 'saliencymaps/'+os.path.basename(x), glob('dataset/saliency_dataset/saliencymaps/*.png')))
+                image_list.extend(images_path)
+                print('Extend lables: ', len(images_path))
+                im_label.extend(lab_path)
+                print('Extend lables: ', len(lab_path))
+                # import ipdb; ipdb.set_trace()
+                    # for seq in seqs: #所有数据集
+                        # seq = seq.strip('\n') 
+                        # import ipdb; ipdb.set_trace()
+                        # images = np.sort(os.listdir(os.path.join(img_root_dir,seq.strip())+'/images/'))#针对某个数据集，比如DUT			
+                        # images_path = list(map(lambda x: os.path.join((seq +'/images'), x), images))         
+                        # image_list.extend(images_path)
+                        # print('Extend lables: ', len(images_path))
+
+                        # lab = np.sort(os.listdir(os.path.join(img_root_dir,seq.strip())+'/saliencymaps'))
+                        # lab_path = list(map(lambda x: os.path.join((seq +'/saliencymaps'),x), lab))
+                        # im_label.extend(lab_path)
+                        # print('Extend lables: ', len(lab_path))
         else: #针对所有的训练样本， video_list存放的是图片的路径
 
             # Initialize the per sequence images for online training
@@ -221,7 +230,8 @@ class PairwiseImg(Dataset):
         else:
             gt = np.zeros(img.shape[:-1], dtype=np.uint8)
             
-        if self.inputRes is not None:            
+        if self.inputRes is not None:         
+            # import ipdb; ipdb.set_trace()   
             img = imresize(img, self.inputRes)
             if self.img_labels[idx] is not None and self.train:
                 label = imresize(label, self.inputRes, interp='nearest')
