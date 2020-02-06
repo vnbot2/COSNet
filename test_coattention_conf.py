@@ -169,6 +169,7 @@ def main():
     for index, batch in enumerate(testloader):
         print('%d processd'%(index))
         target = batch['target']
+        import ipdb; ipdb.set_trace()
         temp = batch['seq_name']
         args.seq_name=temp[0]
         print(args.seq_name)
