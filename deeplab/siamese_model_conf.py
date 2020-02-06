@@ -203,14 +203,16 @@ class ResNet(nn.Module):
 
     def forward(self, x):
         input_size = x.size()[2:]
-        x = self.conv1(x)
-        x = self.bn1(x)
-        x = self.relu(x)
-        x = self.maxpool(x)
-        x = self.layer1(x)
-        x = self.layer2(x)
-        x = self.layer3(x)
-        x = self.layer4(x)
+        with torch.no_grad():
+            x = self.conv1(x)
+            x = self.bn1(x)
+            x = self.relu(x)
+            x = self.maxpool(x)
+            x = self.layer1(x)
+            x = self.layer2(x)
+            x = self.layer3(x)
+            x = self.layer4(x)
+            
         fea = self.layer5(x)
         x = self.main_classifier(fea)
         #print("before upsample, tensor size:", x.size())
@@ -253,6 +255,7 @@ class CoattentionModel(nn.Module):
         
         #input1_att, input2_att = self.coattention(input1, input2) 
         input_size = input1.size()[2:]
+        # with torch.no_grad():
         exemplar, temp = self.encoder(input1)
         query, temp = self.encoder(input2)		 
         fea_size = query.size()[2:]	 
