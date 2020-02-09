@@ -69,7 +69,7 @@ class ImageDir(Dataset):
         # seq_name1 = self.img_list[target_id].split('/')[-2] #获取视频名称
         # sample = {'target': target, 'target_gt': target_gt, 'seq_name': sequence_name, 'search_0': None}
         # if self.range>=1:
-        #     my_index = self.Index[seq_name1]
+        #     my_index = self.index[seq_name1]
         #     search_num = list(range(my_index[0], my_index[1]))  
         #     search_ids = random.sample(search_num, self.range)#min(len(self.img_list)-1, target_id+np.random.randint(1,self.range+1))
         
@@ -157,20 +157,20 @@ class PairwiseImg(Dataset):
             fname = 'train_seqs'
         else:
             fname = 'val_seqs'
-        
         if self.seq_name is None: 
             with open(os.path.join(db_root_dir, fname + '.txt')) as f:
                 seqs = f.readlines()
                 img_list = []
                 labels = []
-                Index = {}
+                index = {}
                 for seq in seqs:                    
                     images = np.sort(os.listdir(os.path.join(db_root_dir, 'JPEGImages/480p/', seq.strip('\n'))))
                     images_path = list(map(lambda x: os.path.join('JPEGImages/480p/', seq.strip(), x), images))
+                    # import ipdb; ipdb.set_trace()
                     start_num = len(img_list)
                     img_list.extend(images_path)
                     end_num = len(img_list)
-                    Index[seq.strip('\n')]= np.array([start_num, end_num])
+                    index[seq.strip('\n')]= np.array([start_num, end_num])
                     ano_path = os.path.join(db_root_dir, 'Annotations/480p/', seq.strip('\n'))
                     if os.path.exists(ano_path):
                         lab = np.sort(os.listdir(ano_path))
@@ -193,8 +193,7 @@ class PairwiseImg(Dataset):
 
         self.img_list = img_list
         self.labels = labels
-        self.Index = Index
-        #img_files = open('all_im.txt','w+')
+        self.index = index
 
     def __len__(self):
         return len(self.img_list)
@@ -205,7 +204,7 @@ class PairwiseImg(Dataset):
         seq_name1 = self.img_list[target_id].split('/')[-2] #获取视频名称
         sample = {'target': target, 'target_gt': target_gt, 'seq_name': sequence_name, 'search_0': None}
         if self.range>=1:
-            my_index = self.Index[seq_name1]
+            my_index = self.index[seq_name1]
             search_num = list(range(my_index[0], my_index[1]))  
             search_ids = random.sample(search_num, self.range)#min(len(self.img_list)-1, target_id+np.random.randint(1,self.range+1))
         

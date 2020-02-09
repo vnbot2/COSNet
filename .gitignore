@@ -5,3 +5,4 @@ pyson
 images
 result
 dataset
+*.npy

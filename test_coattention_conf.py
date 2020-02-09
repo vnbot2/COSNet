@@ -50,7 +50,7 @@ def get_arguments():
                         help="choose gpu device.")
     parser.add_argument("--seq_name", default = 'bmx-bumps')
     parser.add_argument("--use_crf", default = 'True')
-    parser.add_argument("--sample_range", default =2)
+    parser.add_argument("--sample_range", default = 5)
     
     return parser.parse_args()
 
@@ -128,8 +128,6 @@ def main():
     model = CoattentionNet(num_classes=args.num_classes)
     
     saved_state_dict = torch.load(args.restore_from, map_location=lambda storage, loc: storage)
-    #print(saved_state_dict.keys())
-    #model.load_state_dict({k.replace('pspmodule.',''):v for k,v in torch.load(args.restore_from)['state_dict'].items()})
     model.load_state_dict( convert_state_dict(saved_state_dict["model"]) ) #convert_state_dict(saved_state_dict["model"])
 
     model.eval()
@@ -167,12 +165,9 @@ def main():
     my_index = 0
     old_temp=''
     for index, batch in enumerate(testloader):
-        print('%d processd'%(index))
         target = batch['target']
-        import ipdb; ipdb.set_trace()
         temp = batch['seq_name']
         args.seq_name=temp[0]
-        print(args.seq_name)
         if old_temp==args.seq_name:
             my_index = my_index+1
         else:
@@ -187,14 +182,13 @@ def main():
             output_sum =  output[0].data[0,0]
             # Fuse
             z = torch.zeros_like(output_sum)
-            output_sum = torch.stack([z,z,output_sum], -1)
+            output_sum = output_sum/output_sum.max()
+            output_sum = torch.stack([output_sum,output_sum,output_sum], -1)
             sum_target = target[0].permute([1, 2, 0])
             sum_target = (sum_target-sum_target.min())/(sum_target.max()-sum_target.min())
-            output_sum = output_sum.cpu()*.5+sum_target.cpu()*.5
+            output_sum = output_sum.cpu()*sum_target.cpu()
             # 
             output_sum = output_sum.cpu().numpy() 
-            #np.save('infer'+str(i)+'.npy',output1)
-            #output2 = output[1].data[0, 0].cpu().numpy() #interp'
         
         output1 = output_sum/args.sample_range
      
@@ -248,8 +242,8 @@ def main():
         
 
         if args.dataset == 'voc12':
-            print(output.shape)
-            print(size)
+            # print(output.shape)
+            # print(size)
             output = output[:,:size[0],:size[1]]
             output = output.transpose(1,2,0)
             output = np.asarray(np.argmax(output, axis=2), dtype=np.uint8)
@@ -270,8 +264,8 @@ def main():
                 #color_file = Image.fromarray(voc_colorize(output).transpose(1, 2, 0), 'RGB')
                 mask.save(seg_filename)
                 print('Output-> ', seg_filename)
-                #np.concatenate((torch.zeros(1, 473, 473), mask, torch.zeros(1, 512, 512)),axis = 0)
-                #save_image(output1 * 0.8 + target.data, args.vis_save_dir, normalize=True)
+                # np.concatenate((torch.zeros(1, 473, 473), mask, torch.zeros(1, 512, 512)),axis = 0)
+                # save_image(output1 * 0.8 + target.data, args.vis_save_dir, normalize=True)
 
         elif args.dataset == 'cityscapes':
             output = output.transpose(1,2,0)

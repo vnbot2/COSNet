@@ -21,7 +21,7 @@ if __name__ == '__main__':
     parser.add_argument('--mode', choices=['v2i', 'i2v'])
 
     args = parser.parse_args()
-    os.makedirs(args.output, exist_ok=True)    
+    # os.makedirs(args.output, exist_ok=True)    
     if args.mode == 'v2i':
         file_name = os.path.basename(args.input).split('.')[0]
         vidcap = cv2.VideoCapture(args.input)
@@ -73,7 +73,8 @@ if __name__ == '__main__':
                 #inserting the frames into an image array
                 frame_array.append(img)
 
-            pathOut = os.path.join(args.output, video_name+'.mp4')
+            pathOut = args.output 
+            # os.path.join(args.output, video_name+'.mp4')
 
             out = cv2.VideoWriter(pathOut,cv2.VideoWriter_fourcc(*'DIVX'), fps, size)
             for i in tqdm(range(len(frame_array))):
