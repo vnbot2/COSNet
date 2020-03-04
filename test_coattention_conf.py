@@ -120,6 +120,13 @@ def convert_state_dict(state_dict):
 def sigmoid(inX): 
     return 1.0/(1+np.exp(-inX))#定义一个sigmoid方法，其本质就是1/(1+e^-x)
 
+def fuse(a, b):
+    a = (a-a.min())/(a.max()-a.min())
+    b = (b-b.min())/(b.max()-b.min())
+    fused = (a+b)
+    return fused/fused.max()
+
+
 def main():
     args = get_arguments()
     print("=====> Configure dataset and model")
@@ -176,25 +183,17 @@ def main():
         for i in range(0,args.sample_range):  
             search = batch['search'+'_'+str(i)]
             search_im = search
-            
             output = model(Variable(target, volatile=True).cuda(),Variable(search_im, volatile=True).cuda())
-            #print(output[0]) # output有两个
-            output_sum =  output[0].data[0,0]
-            # Fuse
-            z = torch.zeros_like(output_sum)
-            output_sum = output_sum/output_sum.max()
-            output_sum = torch.stack([output_sum,output_sum,output_sum], -1)
-            sum_target = target[0].permute([1, 2, 0])
-            sum_target = (sum_target-sum_target.min())/(sum_target.max()-sum_target.min())
-            output_sum = output_sum.cpu()*sum_target.cpu()
-            # 
-            output_sum = output_sum.cpu().numpy() 
+            output_sum = output_sum + output[0].data[0,0].cpu().numpy()
         
         output1 = output_sum/args.sample_range
-     
+        # import ipdb; ipdb.set_trace()
+        z = np.zeros_like(output1)
+        output1 = np.stack([output1, z,z ], axis=-1)
+        output_fuse = fuse(target[0].permute([1,2,0]).cpu().numpy()[:,:,::-1], output1)
         first_image = np.array(Image.open('dataset/DAVIS2017/Annotations/480p/blackswan/00000.png'))
         original_shape = first_image.shape 
-        output1 = cv2.resize(output1, (original_shape[1],original_shape[0]))
+        output_fuse = cv2.resize(output_fuse, (original_shape[1],original_shape[0]))
         if 0:
             original_image = target[0]
             #print('image type:',type(original_image.numpy()))
@@ -236,7 +235,7 @@ def main():
             MAP = np.argmax(Q, axis=0)
             output1 = MAP.reshape((original_shape[0],original_shape[1]))
 
-        mask = (output1*255).astype(np.uint8)
+        mask = (output_fuse*255).astype(np.uint8)
         #print(mask.shape[0])
         mask = Image.fromarray(mask)
         
