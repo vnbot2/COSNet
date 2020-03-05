@@ -4,6 +4,8 @@ cache
 pyson
 images
 result
-dataset
 *.npy
 *.mp4
+dataset
+zipdata
+*.zip
